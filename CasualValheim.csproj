@@ -13,6 +13,9 @@
     <Reference Include="0Harmony">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Valheim dedicated server\BepInEx\core\0Harmony.dll</HintPath>
     </Reference>
+    <Reference Include="assembly_utils">
+      <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Valheim dedicated server\valheim_server_Data\Managed\assembly_utils.dll</HintPath>
+    </Reference>
     <Reference Include="assembly_valheim">
       <HintPath>..\..\..\..\Program Files (x86)\Steam\steamapps\common\Valheim dedicated server\valheim_server_Data\Managed\assembly_valheim.dll</HintPath>
     </Reference>
