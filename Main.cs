@@ -13,7 +13,7 @@ namespace CasualValheim
     {
         const string pluginGUID = "raelik.CasualValheim";
         const string pluginName = "CasualValheim";
-        const string pluginVersion = "0.0.2";
+        const string pluginVersion = "0.0.3";
 
 
         public static ConfigEntry<bool> DbgLogEnabled;
