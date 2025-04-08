@@ -4,6 +4,8 @@ using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
+
 using ItemType = ItemDrop.ItemData.ItemType;
 
 namespace CasualValheim
@@ -115,13 +117,12 @@ namespace CasualValheim
 
             static void Postfix(Inventory original, Payload __state)
             {
-
                 if (null != __state &&
                     null != __state.limbo)
                 {
                     foreach (ItemDrop.ItemData item in __state.limbo)
                     {
-                        original.AddItem(item);
+                        original.AddItem(item, item.m_gridPos);
                     }
                     __state.limbo.Clear();
                 }
