@@ -2,7 +2,7 @@
 {
     static class CVUtil
     {
-        public static void Log(string output, bool decorate = true, bool debug = true)
+        public static void Log(string output, bool decorate = true, bool debug = true, bool stacktrace = false)
         {
             if( null != Mod.DbgLogEnabled &&
                 !Mod.DbgLogEnabled.Value && 
@@ -16,6 +16,13 @@
                 var header = debug ? "^^^^^DBG| ": " " ;
                 output = $"@@@@@@{header}{output} @@@@@@";
             }
+
+            if (stacktrace)
+            {
+                output += "\n";
+                output += UnityEngine.StackTraceUtility.ExtractStackTrace();
+            }
+
 
             Mod.logger.LogInfo(output);
         }
