@@ -19,7 +19,7 @@
 
             if (stacktrace)
             {
-                output += "\n";
+                output += System.Environment.NewLine;
                 output += UnityEngine.StackTraceUtility.ExtractStackTrace();
             }
 
