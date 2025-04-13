@@ -12,7 +12,7 @@ namespace CasualValheim
     {
         const string pluginGUID = "raelik.CasualValheim";
         const string pluginName = "CasualValheim";
-        const string pluginVersion = "0.0.3";
+        const string pluginVersion = "0.1.0";
 
 
         public static ConfigEntry<bool> VerboseLogEnabled;
