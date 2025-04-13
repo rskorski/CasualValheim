@@ -245,7 +245,7 @@ namespace CasualValheim
                 player2npc.Remove(iid);
                 foreach( var tp in set )
                 {
-                    npc2player[tp.playerIID].Remove(tp);
+                    npc2player[tp.npcIID].Remove(tp);
                 }
             }
         }
