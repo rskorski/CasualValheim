@@ -67,8 +67,8 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Condition="'$(Configuration)'=='DeployRelease'" Command="call $(ProjectDir)deploy.bat $(OutDir) $(AssemblyName)" />
-    <Exec Condition="'$(Configuration)'=='DeployDebug'" Command="call $(ProjectDir)deploy.bat $(OutDir) $(AssemblyName)" />
+    <Exec Condition="'$(Configuration)'=='DeployRelease'" Command="powershell -ExecutionPolicy Unrestricted -file $(ProjectDir)deploy.ps1 -OutDir $(OutDir) -AssemblyName $(AssemblyName)" />
+    <Exec Condition="'$(Configuration)'=='DeployDebug'"   Command="powershell -ExecutionPolicy Unrestricted -file $(ProjectDir)deploy.ps1 -OutDir $(OutDir) -AssemblyName $(AssemblyName)" />
   </Target>
 
 </Project>
