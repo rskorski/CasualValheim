@@ -4,9 +4,9 @@ using HarmonyLib;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 
 using ItemType = ItemDrop.ItemData.ItemType;
+
 
 namespace CasualValheim
 {
@@ -35,11 +35,9 @@ namespace CasualValheim
 
         readonly static String DropOnDeathDefault = "CVDefault";
 
-        partial void DeathClemencyConfig()
+        partial void DeathClemencyInit()
         {
-            
-
-            CVUtil.Log("DeathClemencyConfig called");
+            CVUtil.Log("DeathClemency Initializing");
             DeathPenaltyPercentage = Config.Bind("DeathClemency", "DeathPenaltyPercentage", 0.0f, "Percentage of skill loss on death");
             ItemsDroppedOnDeathStrings = Config.Bind("DeathClemency", "ItemsDroppedOnDeath", "", $"Comma separated list matching the ItemDrop.ItemData.ItemType enum.  Put \"{DropOnDeathDefault}\" to apply game default item drop behavior.");
 
@@ -72,9 +70,9 @@ namespace CasualValheim
         {
             static void Prefix(ref float factor)
             {
-                CVUtil.Log($"LowerAllSkills_Prefix |   __result in: [{factor}],  DeathPenaltyPercentage.Value [{DeathPenaltyPercentage.Value}]");
+                CVUtil.LogInfo($"LowerAllSkills_Prefix |   __result in: [{factor}],  DeathPenaltyPercentage.Value [{DeathPenaltyPercentage.Value}]");
                 factor *= DeathPenaltyPercentage.Value;
-                CVUtil.Log($"LowerAllSkills_Prefix |   __result out: [{factor}]");
+                CVUtil.LogInfo($"LowerAllSkills_Prefix |   __result out: [{factor}]");
             }
         }
 
@@ -92,7 +90,7 @@ namespace CasualValheim
                 __state = new Payload();
                 if (null == ItemsDroppedOnDeathEnums)
                 {
-                    CVUtil.Log("MoveInventoryToGrave_Prefix| Default drop behavior indicated, passing through to original function.");
+                    CVUtil.LogInfo("MoveInventoryToGrave_Prefix| Default drop behavior indicated, passing through to original function.");
                     return;
                 }
 
@@ -104,13 +102,13 @@ namespace CasualValheim
                     var item = originalItems[iItem];
                     if (!ItemsDroppedOnDeathEnums.Contains(item.m_shared.m_itemType) )
                     {
-                        CVUtil.Log($"MoveInventoryToGrave_Prefix| Keeping item [{item.m_shared.m_name}] due to type [{item.m_shared.m_itemType}].");
+                        CVUtil.LogInfo($"MoveInventoryToGrave_Prefix| Keeping item [{item.m_shared.m_name}] due to type [{item.m_shared.m_itemType}].");
                         __state.limbo.Add(item);
                         originalItems.RemoveAt(iItem);
                     }
                     else
                     {
-                        CVUtil.Log($"MoveInventoryToGrave_Prefix| Passing item [{item.m_shared.m_name}] due to type [{item.m_shared.m_itemType}].");
+                        CVUtil.LogInfo($"MoveInventoryToGrave_Prefix| Passing item [{item.m_shared.m_name}] due to type [{item.m_shared.m_itemType}].");
                     }
                 }
             }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 using System.Text;
+using System.Linq;
 
 
 namespace CasualValheim
@@ -28,9 +29,9 @@ namespace CasualValheim
         private static ConfigEntry<bool> InfStaminaSneaking;
         private static ConfigEntry<string> PunyBeings;
 
-        partial void OdinsEnduranceConfig()
+        partial void OdinsEnduranceInit()
         {
-            CVUtil.Log("OdinsEnduranceConfig called");
+            CVUtil.Log("OdinsEndurance Initializing");
 
             MaxWeightMult = Config.Bind("OdinsEndurance", "MaxWeightMult", 10.0f, "multiplier for MaxCarryWeight");
             InfStamina = Config.Bind("OdinsEndurance", "InfStamina", true, "Prevent stamina drain, considering the state specific flags.");
@@ -125,6 +126,8 @@ namespace CasualValheim
         //
         //  Puny Beings
         //
+        // NOTE: LogDebug should be used most often in this system to avoid revealing game information a player may not know otherwise.
+        //   Spawned NPCs are not immediately visible so the player would "see" them before they should.
 
         class TargetingMap
         {
@@ -175,44 +178,52 @@ namespace CasualValheim
                 return wasTargeting;
             }
 
-            // returns true if the player will honor the targeting, false if the player considers the NPC as puny and will ignore the targeting.
-            public bool ConsiderPlayerAsTarget(Character targetingNPC, Player player)
+
+            public enum Consideration
+            {
+                Existing,  // the targeting was previously established
+                Puny,      // the targeter is puny, ignore hid
+                Worthy,    // the targeter is a worthy opponent, heed its challenge
+            }
+
+            public Consideration ConsiderPlayerAsTarget(Character targetingNPC, Player player)
             {
                 int playerIID = player.GetInstanceID();
                 int npcIID  = targetingNPC.GetInstanceID();
                 string processedName = GetProcessedName(targetingNPC);
 
-                CVUtil.Log($"ConsiderPlayerAsTarget | targetingNPC [iid:{npcIID}, processed_name:{processedName}] has started targeting Player [iid:{playerIID}].", debug:true);
+                CVUtil.LogVerbose
+                    ( () => {
 
-                StringBuilder sb = new StringBuilder();
-                sb.AppendLine("player2npc = {");
-                foreach( var kvp in player2npc)
+                        StringBuilder sb = new StringBuilder();
+                        sb.Append("ConsiderPlayerAsTarget | tables ----");
+                        sb.AppendLine("player2npc = {");
+                        foreach( var kvp in player2npc )
+                        {
+                            sb.AppendLine($"  [{kvp.Key.ToString()}] = {kvp.Value.ToString()}");
+                        }
+                        sb.AppendLine("}");
+                        sb.AppendLine("");
+                        sb.AppendLine("npc2player = {");
+                        foreach( var kvp in npc2player )
+                        {
+                            sb.AppendLine($"  [{kvp.Key.ToString()}] = {kvp.Value.ToString()}");
+                        }
+                        sb.AppendLine("}");
+                        return sb.ToString();
+                    });
+
+                if( PunyBeings.Contains(processedName) )
                 {
-                    sb.AppendLine($"  [{kvp.Key.ToString()}] = {kvp.Value.ToString()}");
+                    return Consideration.Puny;
                 }
-                sb.AppendLine("}");
-                sb.AppendLine("");
-                sb.AppendLine("npc2player = {");
-                foreach (var kvp in npc2player)
-                {
-                    sb.AppendLine($"  [{kvp.Key.ToString()}] = {kvp.Value.ToString()}");
-                }
-                sb.AppendLine("}");
+                TargetingPair tp = new TargetingPair(playerIID, npcIID);
+                
+                // the dicts should mirror each other, so we only check one of them to determine the return
+                player2npc[playerIID].Add(tp);
+                bool wasPreviouslyTargeted = npc2player[npcIID].Add(tp);
 
-                CVUtil.Log($"ConsiderPlayerAsTarget | tables ----\n{sb.ToString()}", debug:true);
-
-
-                CVUtil.Log($"testing {PunyBeings}  contians {processedName}");
-                if (!PunyBeings.Contains(processedName))
-                {
-                    TargetingPair tp = new TargetingPair(playerIID, npcIID);
-                    player2npc[playerIID].Add(tp);
-                    npc2player[npcIID].Add(tp);
-
-                    return true;
-                }
-
-                return false;
+                return wasPreviouslyTargeted ? Consideration.Existing : Consideration.Worthy;
             }
             public bool CheckForMightyTargeters(Player player)
             {
@@ -268,9 +279,8 @@ namespace CasualValheim
         {
             if( null == npc )
             {
-                CVUtil.Log($"UpdateAIForPunyBeings | ERROR: processing an npc that has no Character", stacktrace: true);
+                CVUtil.LogError($"UpdateAIForPunyBeings | ERROR: processing an npc that has no Character");
             }
-
 
             if( null == npc || null == target || !target.IsPlayer() )
             {
@@ -280,20 +290,26 @@ namespace CasualValheim
             if( null != target && target.IsPlayer() )
             {
                 Player player = (Player)target;
-                if( playerTargetingMap.ConsiderPlayerAsTarget(npc, player) )
+                TargetingMap.Consideration con = playerTargetingMap.ConsiderPlayerAsTarget(npc, player);
+                switch( con )
                 {
-                    CVUtil.Log($"UpdateAIForPunyBeings | NPC [iid:{npc.GetInstanceID()}, name:{npc.name}] has started targeting Player [iid:{player.GetInstanceID()}, name:{player.m_name}].", debug:true);
-                }
-                else
-                {
-                    CVUtil.Log($"UpdateAIForPunyBeings | Player [{player.m_name}] cares not about NPC [iid:{npc.GetInstanceID()}, name:{npc.name}], for they are puny.", debug:true);
+                    case TargetingMap.Consideration.Worthy:
+                        CVUtil.LogDebug($"UpdateAIForPunyBeings | NPC [iid:{npc.GetInstanceID()}, name:{npc.name}] has started targeting Player [iid:{player.GetInstanceID()}, name:{player.m_name}].");
+                        break;
+
+                    case TargetingMap.Consideration.Puny:
+                        CVUtil.LogDebug($"UpdateAIForPunyBeings | Player [{player.m_name}] cares not about NPC [iid:{npc.GetInstanceID()}, name:{npc.name}], for they are puny.");
+                        break;
+
+                    default:
+                        break;
                 }
             }
             else
             {
                 if( playerTargetingMap.ClearNPCTarget(npc) )
                 {
-                    CVUtil.Log($"UpdateAIForPunyBeings | NPC [iid:{npc.GetInstanceID()}, name:{npc.name}] no longer has a target.", debug: true);
+                    CVUtil.LogDebug($"UpdateAIForPunyBeings | NPC [iid:{npc.GetInstanceID()}, name:{npc.name}] no longer has a target.");
                 }
             }
         }
@@ -306,7 +322,7 @@ namespace CasualValheim
             {                
                 Character monster = (Character)BaseAI_character.GetValue(__instance);
                 Character target = (Character)MonsterAI_targetCreature.GetValue(__instance);
-                CVUtil.Log($"MonsterAI.UpdateAI.POSTFIX | Update Monster [iid:{monster.GetInstanceID()}, name:{monster.name}].", debug:true);
+                CVUtil.LogVerbose($"MonsterAI.UpdateAI.POSTFIX | Update Monster [iid:{monster.GetInstanceID()}, name:{monster.name}].");
                 UpdateAIForPunyBeings(monster, target);
             }
         }
@@ -318,7 +334,7 @@ namespace CasualValheim
             {
                 Character animal = (Character)BaseAI_character.GetValue(__instance);
                 Character target = (Character)AnimalAI_target.GetValue(__instance);
-                CVUtil.Log($"AnimalAI.UpdateAI.POSTFIX  | Update Animal [iid:{animal.GetInstanceID()}, name:{animal.name}].", debug:true);
+                CVUtil.LogVerbose($"AnimalAI.UpdateAI.POSTFIX  | Update Animal [iid:{animal.GetInstanceID()}, name:{animal.name}].");
                 UpdateAIForPunyBeings(animal, target);
             }
         }
@@ -333,7 +349,7 @@ namespace CasualValheim
             static void Postfix(BaseAI __instance)
             {
                 Character character = (Character)BaseAI_character.GetValue(__instance);
-                CVUtil.Log($"BaseAI.Awake.POSTFIX     | Awaken, NPC [iid:{character.GetInstanceID()},  name:{character.name}].", debug:true);
+                CVUtil.LogDebug($"BaseAI.Awake.POSTFIX     | Awaken, NPC [iid:{character.GetInstanceID()},  name:{character.name}].");
                 playerTargetingMap.PrepNPC(character);
             }
         }
@@ -343,7 +359,7 @@ namespace CasualValheim
             static void Postfix(BaseAI __instance)
             {
                 Character character = (Character)BaseAI_character.GetValue(__instance);
-                CVUtil.Log($"BaseAI.OnDestroy.POSTFIX | Be gone, NPC [iid:{character.GetInstanceID()},  name:{character.name}]", debug:true);
+                CVUtil.LogDebug($"BaseAI.OnDestroy.POSTFIX | Be gone, NPC [iid:{character.GetInstanceID()},  name:{character.name}]");
                 playerTargetingMap.CleanupNPC(character);
             }
         }
@@ -352,7 +368,7 @@ namespace CasualValheim
         {
             static void Postfix(Player __instance)
             {
-                CVUtil.Log($"Player.Awake.POSTFIX | Awaken, Player [iid:{__instance.GetInstanceID()}, name:{__instance.name}].", debug:true);
+                CVUtil.LogDebug($"Player.Awake.POSTFIX | Awaken, Player [iid:{__instance.GetInstanceID()}, name:{__instance.name}].");
                 playerTargetingMap.PrepPlayer(__instance);
             }
         }
@@ -361,7 +377,7 @@ namespace CasualValheim
         {
             static void Postfix(Player __instance)
             {
-                CVUtil.Log($"Player.OnDestroy.POSTFIX     | Be gone, Player [iid:{__instance.GetInstanceID()},  name:{__instance.name}].", debug:true);
+                CVUtil.LogDebug($"Player.OnDestroy.POSTFIX     | Be gone, Player [iid:{__instance.GetInstanceID()},  name:{__instance.name}].");
                 playerTargetingMap.CleanupPlayer(__instance);
             }
         }

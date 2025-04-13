@@ -2,7 +2,6 @@
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
-using System.Collections.Generic;
 using System.Reflection;
 
 
@@ -16,24 +15,27 @@ namespace CasualValheim
         const string pluginVersion = "0.0.3";
 
 
-        public static ConfigEntry<bool> DbgLogEnabled;
+        public static ConfigEntry<bool> VerboseLogEnabled;
 
         private readonly Harmony HarmonyInstance = new Harmony(pluginGUID);
 
         public static ManualLogSource logger = BepInEx.Logging.Logger.CreateLogSource(pluginName);
 
-        partial void DeathClemencyConfig();
-        partial void OdinsEnduranceConfig();
+        partial void DeathClemencyInit();
+        partial void OdinsEnduranceInit();
 
         public void Awake()
         {
-            CVUtil.Log("Loading START", debug:false);
+            CVUtil.LogDebug("Loading START");
             Config.SaveOnConfigSet = false;
 
-            DbgLogEnabled = Config.Bind("CasualValheim", "DbgLogEnabled", true, "enable debug log output");
+            CVUtil.Log("CasualValheim Initializing");
 
-            DeathClemencyConfig();
-            OdinsEnduranceConfig();
+            VerboseLogEnabled = Config.Bind("CasualValheim", "VerboseLogEnabled", false, "enable verbose logging, which is noisy and/or expensive.  Requires BepInEx Debug level logging.");
+            CVUtil.LoggingInit(VerboseLogEnabled.Value);
+
+            DeathClemencyInit();
+            OdinsEnduranceInit();
 
             Config.Save();
             Config.SaveOnConfigSet = true;
@@ -41,7 +43,7 @@ namespace CasualValheim
             Assembly assembly = Assembly.GetExecutingAssembly();
             HarmonyInstance.PatchAll(assembly);
 
-            CVUtil.Log("Loading END", debug:false);
+            CVUtil.LogDebug("Loading END");
         }
     }
 }
